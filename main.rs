@@ -166,19 +166,25 @@ fn relu(x: ArrayView2<f32>) -> Array2<f32> {
     x.mapv(|x| if x < 0.0 { 0.0 } else { x })
 }
 
+fn clip(x: ArrayView2<f32>, min: f32, max: f32) -> Array2<f32> {
+    x.mapv(|x| {
+        if x < min {
+            min
+        } else if x > max {
+            max
+        } else {
+            x
+        }
+    })
+}
+
 impl Embedding {
-    fn forward(&self, x: Array2<f32>) -> Array2<f32> {
-        println!("Input: {:?}", x);
-        let x = (x - &self.mean) / &self.std;
-        // TODO: clip
-        println!("Norm: {:?}", x);
-        let x = self.proj.forward(x);
-        println!("Layer1: {:?}", x);
-        let x = relu(x.view());
-        println!("Relu: {:?}", x);
-        let x = self.ln.forward(x);
-        println!("LN: {:?}", x);
-        x
+    fn forward(&self, mut x: Array2<f32>) -> Array2<f32> {
+        x = (x - &self.mean) / &self.std;
+        x = clip(x.view(), -5.0, 5.0);
+        x = self.proj.forward(x);
+        x = relu(x.view());
+        self.ln.forward(x)
     }
 }
 
