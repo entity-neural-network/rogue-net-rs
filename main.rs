@@ -1,9 +1,9 @@
 use ndarray::prelude::*;
-use ndarray::Array;
+use ndarray::{concatenate, Array};
 use std::collections::HashMap;
 use std::io::Cursor;
 
-use rmpv::{Value, ValueRef};
+use rmpv::Value;
 
 #[derive(Debug, Clone)]
 enum Error {
@@ -82,10 +82,14 @@ fn main() {
     //let bytes = include_bytes!("test.msgpack");
     let bytes = include_bytes!("checkpoints/latest-step000000024576/state.agent.msgpack");
     let state_dict = decode_state_dict(bytes).unwrap();
-    println!("{:#?}", state_dict);
+    // println!("{:#?}", state_dict);
     let rogue_net = RogueNet::from(&state_dict);
     println!("{:#?}", rogue_net);
-    rogue_net.forward(array![[3.0, 5.0], [8.0, 4.0]]);
+    let mut entities = HashMap::new();
+    entities.insert("Head".to_string(), array![[3.0, 4.0]]);
+    entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
+    entities.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
+    rogue_net.forward(&entities);
 }
 
 fn decode_state_dict(bytes: &[u8]) -> Result<TensorDict, Error> {
@@ -100,6 +104,7 @@ fn decode_state_dict(bytes: &[u8]) -> Result<TensorDict, Error> {
                     Value::String(s) => s.as_str().unwrap().to_string(),
                     _ => return Err(Error::ParseError("key is not string".to_string())),
                 };
+                println!("{}", key);
                 let tensor = decode_tensor(value)?;
                 tensors.insert(key, tensor);
             }
@@ -117,8 +122,18 @@ struct RogueNet {
 }
 
 impl RogueNet {
-    fn forward(&self, food: Array2<f32>) -> Array2<f32> {
-        self.embeddings["Food"].forward(food)
+    fn forward(&self, entities: &HashMap<String, Array2<f32>>) -> Array2<f32> {
+        let mut embeddings = Vec::with_capacity(entities.len());
+        for (key, entity) in entities {
+            let x = self.embeddings[key].forward(entity.view());
+            println!("{} {:?}", key, x);
+            embeddings.push(x);
+        }
+        concatenate(
+            Axis(0),
+            &embeddings.iter().map(|x| x.view()).collect::<Vec<_>>(),
+        )
+        .unwrap()
     }
 }
 
@@ -137,8 +152,8 @@ impl<'a> From<&'a TensorDict> for RogueNet {
 
 #[derive(Debug, Clone)]
 struct Embedding {
-    mean: Array<f32, Ix1>,
-    std: Array<f32, Ix1>,
+    mean: Array<f32, Ix2>,
+    std: Array<f32, Ix2>,
     proj: Linear,
     ln: LayerNorm,
 }
@@ -147,9 +162,15 @@ impl<'a> From<&'a TensorDict> for Embedding {
     fn from(state_dict: &TensorDict) -> Self {
         let dict = state_dict.as_dict();
         let norm = dict["0"].as_dict();
-        let mean = norm["mean"].as_tensor().to_ndarray_f32();
+        let mean = norm["mean"]
+            .as_tensor()
+            .to_ndarray_f32()
+            .insert_axis(Axis(0));
         let count = norm["count"].as_tensor().to_ndarray_f32();
-        let squares_sum = norm["squares_sum"].as_tensor().to_ndarray_f32();
+        let squares_sum = norm["squares_sum"]
+            .as_tensor()
+            .to_ndarray_f32()
+            .insert_axis(Axis(0));
         Embedding {
             std: (squares_sum / (count - 1.0))
                 .mapv(|x| if x == 0.0 { 1.0 } else { x.sqrt() })
@@ -179,11 +200,11 @@ fn clip(x: ArrayView2<f32>, min: f32, max: f32) -> Array2<f32> {
 }
 
 impl Embedding {
-    fn forward(&self, mut x: Array2<f32>) -> Array2<f32> {
-        x = (x - &self.mean) / &self.std;
-        x = clip(x.view(), -5.0, 5.0);
-        x = self.proj.forward(x);
-        x = relu(x.view());
+    fn forward(&self, x: ArrayView2<f32>) -> Array2<f32> {
+        let x = (&x - &self.mean) / &self.std;
+        let x = clip(x.view(), -5.0, 5.0);
+        let x = self.proj.forward(x);
+        let x = relu(x.view());
         self.ln.forward(x)
     }
 }
@@ -196,11 +217,9 @@ struct Linear {
 
 impl<'a> From<&'a TensorDict> for Linear {
     fn from(state_dict: &TensorDict) -> Self {
-        println!("SD: {:?}", state_dict);
         let dict = state_dict.as_dict();
         let weight = dict["weight"].as_tensor().to_ndarray_f32();
         let bias = dict["bias"].as_tensor().to_ndarray_f32();
-        println!("{:?}", weight);
         Linear {
             weight: weight.reversed_axes().into_dimensionality().unwrap(),
             bias: bias.insert_axis(Axis(0)).into_dimensionality().unwrap(),
@@ -210,12 +229,6 @@ impl<'a> From<&'a TensorDict> for Linear {
 
 impl Linear {
     fn forward(&self, x: Array2<f32>) -> Array2<f32> {
-        println!(
-            "x.shape: {:?} self.weight.shape: {:?} self.bias.shape: {:?}",
-            x.shape(),
-            self.weight.shape(),
-            self.bias.shape()
-        );
         x.dot(&self.weight) + &self.bias
     }
 }
@@ -242,15 +255,6 @@ impl LayerNorm {
     fn forward(&self, x: Array2<f32>) -> Array2<f32> {
         let mean = x.mean_axis(Axis(1)).unwrap().insert_axis(Axis(1));
         let std = (&x - &mean).std_axis(Axis(1), 0.0).insert_axis(Axis(1));
-        // print all shapes
-        println!(
-            "mean.shape: {:?} std.shape: {:?} x.shape: {:?} weight.shape: {:?} bias.shape: {:?}",
-            mean.shape(),
-            std.shape(),
-            x.shape(),
-            self.weight.shape(),
-            self.bias.shape()
-        );
         (x - mean) / (std + 1e-5) * &self.weight + &self.bias
     }
 }
