@@ -11,4 +11,4 @@ rmpv = "1.0.0"
 
 [[bin]]
 name = "msgpack_test"
-path = "main.rs"
+path = "src/main.rs"
