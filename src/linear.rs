@@ -20,7 +20,7 @@ impl<'a> From<&'a TensorDict> for Linear {
 }
 
 impl Linear {
-    pub fn forward(&self, x: Array2<f32>) -> Array2<f32> {
+    pub fn forward(&self, x: ArrayView2<f32>) -> Array2<f32> {
         x.dot(&self.weight) + &self.bias
     }
 }

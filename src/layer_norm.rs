@@ -21,9 +21,9 @@ impl<'a> From<&'a TensorDict> for LayerNorm {
 }
 
 impl LayerNorm {
-    pub fn forward(&self, x: Array2<f32>) -> Array2<f32> {
+    pub fn forward(&self, x: ArrayView2<f32>) -> Array2<f32> {
         let mean = x.mean_axis(Axis(1)).unwrap().insert_axis(Axis(1));
         let std = (&x - &mean).std_axis(Axis(1), 0.0).insert_axis(Axis(1));
-        (x - mean) / (std + 1e-5) * &self.weight + &self.bias
+        (&x - &mean) / (std + 1e-5) * &self.weight + &self.bias
     }
 }

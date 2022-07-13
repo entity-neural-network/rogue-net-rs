@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use std::io::Cursor;
 
+use indexmap::IndexMap;
 use ndarray::{Array, IxDyn};
 use rmpv::Value;
 
@@ -15,7 +15,7 @@ pub fn decode_state_dict(bytes: &[u8]) -> Result<TensorDict, Error> {
         rmpv::decode::read_value(&mut cursor).map_err(|e| Error::ParseError(e.to_string()))?;
     match value {
         Value::Map(items) => {
-            let mut tensors = TensorDict::Dict(HashMap::new());
+            let mut tensors = TensorDict::Dict(IndexMap::new());
             for (key, value) in items {
                 let key = match key {
                     Value::String(s) => s.as_str().unwrap().to_string(),
@@ -53,7 +53,7 @@ impl Tensor {
 #[derive(Debug, Clone)]
 pub enum TensorDict {
     Tensor(Tensor),
-    Dict(HashMap<String, TensorDict>),
+    Dict(IndexMap<String, TensorDict>),
 }
 
 impl TensorDict {
@@ -68,7 +68,7 @@ impl TensorDict {
                         let key = path[0];
                         let sub_dict = dict
                             .entry(key.to_string())
-                            .or_insert_with(|| TensorDict::Dict(HashMap::new()));
+                            .or_insert_with(|| TensorDict::Dict(IndexMap::new()));
                         insert(sub_dict, &path[1..], value);
                     }
                 }
@@ -77,7 +77,7 @@ impl TensorDict {
         insert(self, &key.split('.').collect::<Vec<_>>(), value);
     }
 
-    pub fn as_dict(&self) -> &HashMap<String, TensorDict> {
+    pub fn as_dict(&self) -> &IndexMap<String, TensorDict> {
         match self {
             TensorDict::Tensor(_) => panic!("as_dict on tensor"),
             TensorDict::Dict(dict) => dict,

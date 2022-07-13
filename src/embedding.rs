@@ -42,8 +42,8 @@ impl Embedding {
     pub fn forward(&self, x: ArrayView2<f32>) -> Array2<f32> {
         let x = (&x - &self.mean) / &self.std;
         let x = clip(x.view(), -5.0, 5.0);
-        let x = self.proj.forward(x);
+        let x = self.proj.forward(x.view());
         let x = relu(x.view());
-        self.ln.forward(x)
+        self.ln.forward(x.view())
     }
 }
