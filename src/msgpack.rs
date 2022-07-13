@@ -21,7 +21,7 @@ pub fn decode_state_dict(bytes: &[u8]) -> Result<TensorDict, Error> {
                     Value::String(s) => s.as_str().unwrap().to_string(),
                     _ => return Err(Error::ParseError("key is not string".to_string())),
                 };
-                println!("{}", key);
+                log::debug!("{}", key);
                 let tensor = decode_tensor(value)?;
                 tensors.insert(key, tensor);
             }

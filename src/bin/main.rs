@@ -5,8 +5,8 @@ use ndarray::prelude::*;
 use rogue_net::load_checkpoint;
 
 fn main() {
+    env_logger::init();
     let rogue_net = load_checkpoint("../norelpos/latest-step000000024576/state.agent.msgpack");
-    // println!("{:#?}", rogue_net);
     let mut entities = HashMap::new();
     entities.insert("Head".to_string(), array![[3.0, 4.0]]);
     entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);

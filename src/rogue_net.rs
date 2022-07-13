@@ -20,7 +20,6 @@ impl RogueNet {
         let mut embeddings = Vec::with_capacity(entities.len());
         for (key, embedding) in &self.embeddings {
             let x = embedding.forward(entities[key].view());
-            println!("{} {:?}", key, x);
             embeddings.push(x);
         }
         let x = concatenate(

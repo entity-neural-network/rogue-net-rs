@@ -46,13 +46,13 @@ impl TransformerBlock {
         let x = self.ln1.forward(x.view());
         let x = self.attention.forward(x.view());
         let x = x + x0;
-        println!("ATTN + RESIDUAL {:?}", x);
+        log::debug!("ATTN + RESIDUAL {:?}", x);
         let x1 = x.view();
         let x = self.ln2.forward(x.view());
         let x = self.mlp.forward(x);
-        println!("MLP {:?}", x);
+        log::debug!("MLP {:?}", x);
         let x = x + x1;
-        println!("MLP + RESIDUAL {:?}", x);
+        log::debug!("MLP + RESIDUAL {:?}", x);
         x
     }
 }
