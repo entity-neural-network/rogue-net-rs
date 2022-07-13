@@ -1,5 +1,6 @@
 use ndarray::{concatenate, s, Array2, ArrayView2, Axis};
 
+use crate::config::RogueNetConfig;
 use crate::fun::{gelu, softmax};
 use crate::layer_norm::LayerNorm;
 use crate::linear::Linear;
@@ -17,14 +18,12 @@ impl Transformer {
         }
         x
     }
-}
 
-impl<'a> From<&'a TensorDict> for Transformer {
-    fn from(state_dict: &TensorDict) -> Self {
+    pub fn new(state_dict: &TensorDict, config: &RogueNetConfig) -> Self {
         let dict = state_dict.as_dict();
         let mut blocks = Vec::new();
         for value in dict["blocks"].as_dict().values() {
-            let block = TransformerBlock::from(value);
+            let block = TransformerBlock::new(value, config.n_head);
             blocks.push(block);
         }
 
@@ -55,15 +54,13 @@ impl TransformerBlock {
         log::debug!("MLP + RESIDUAL {:?}", x);
         x
     }
-}
 
-impl<'a> From<&'a TensorDict> for TransformerBlock {
-    fn from(state_dict: &TensorDict) -> Self {
+    fn new(state_dict: &TensorDict, n_head: u32) -> Self {
         let dict = state_dict.as_dict();
         let ln1 = LayerNorm::from(&dict["ln1"]);
         let mlp = Mlp::from(&dict["mlp"]);
         let ln2 = LayerNorm::from(&dict["ln2"]);
-        let attention = MultiHeadAttention::from(&dict["attn"]);
+        let attention = MultiHeadAttention::new(&dict["attn"], n_head);
 
         TransformerBlock {
             ln1,
@@ -76,6 +73,7 @@ impl<'a> From<&'a TensorDict> for TransformerBlock {
 
 #[derive(Debug, Clone)]
 pub struct MultiHeadAttention {
+    n_head: u32,
     key: Linear,
     value: Linear,
     query: Linear,
@@ -85,15 +83,13 @@ pub struct MultiHeadAttention {
 impl MultiHeadAttention {
     pub fn forward(&self, x: ArrayView2<f32>) -> Array2<f32> {
         let (_, c) = x.dim();
-        // TODO: read from config
-        let n_head = 2;
-        let d_head = c / n_head;
+        let d_head = c / self.n_head as usize;
         let k = self.key.forward(x);
         let q = self.query.forward(x);
         let v = self.value.forward(x);
         let scale = 1.0 / (d_head as f32).sqrt();
         let mut ys = vec![];
-        for head in 0..n_head {
+        for head in 0..self.n_head as usize {
             let slice = s![.., head * d_head..(head + 1) * d_head];
             let q = q.slice(slice);
             let k = k.slice(slice);
@@ -107,10 +103,7 @@ impl MultiHeadAttention {
         let y = concatenate(Axis(1), &ys.iter().map(|x| x.view()).collect::<Vec<_>>()).unwrap();
         self.proj.forward(y.view())
     }
-}
-
-impl<'a> From<&'a TensorDict> for MultiHeadAttention {
-    fn from(state_dict: &TensorDict) -> Self {
+    fn new(state_dict: &TensorDict, n_head: u32) -> Self {
         let dict = state_dict.as_dict();
         let key = Linear::from(&dict["key"]);
         let value = Linear::from(&dict["value"]);
@@ -118,6 +111,7 @@ impl<'a> From<&'a TensorDict> for MultiHeadAttention {
         let proj = Linear::from(&dict["proj"]);
 
         MultiHeadAttention {
+            n_head,
             key,
             value,
             query,

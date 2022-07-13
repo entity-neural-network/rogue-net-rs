@@ -13,6 +13,8 @@ ndarray = { version = "0.15.4", features = ["approx"] }
 rand = "0.8.5"
 rmpv = "1.0.0"
 statrs = "0.15.0"
+ron = "0.7"
+serde = { version = "1", features = ["derive"] }
 
 [[bin]]
 name = "rogue_net"
