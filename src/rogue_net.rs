@@ -7,6 +7,7 @@ use crate::categorical_action_head::CategoricalActionHead;
 use crate::config::RogueNetConfig;
 use crate::embedding::Embedding;
 use crate::msgpack::TensorDict;
+use crate::state::State;
 use crate::transformer::Transformer;
 
 #[derive(Debug, Clone)]
@@ -29,7 +30,7 @@ impl RogueNet {
             &embeddings.iter().map(|x| x.view()).collect::<Vec<_>>(),
         )
         .unwrap();
-        let x = self.backbone.forward(x);
+        let x = self.backbone.forward(x, entities);
         self.action_heads
             .values()
             .next()
@@ -37,11 +38,7 @@ impl RogueNet {
             .forward(x.view(), vec![0])
     }
 
-    pub fn new(state_dict: &TensorDict, config: RogueNetConfig) -> Self {
-        assert!(
-            config.relpos_encoding.is_none(),
-            "relpos_encoding is not supported"
-        );
+    pub fn new(state_dict: &TensorDict, config: RogueNetConfig, state: &State) -> Self {
         assert!(
             config.embd_pdrop == 0.0 && config.resid_pdrop == 0.0 && config.attn_pdrop == 0.0,
             "dropout is not supported"
@@ -55,7 +52,7 @@ impl RogueNet {
             let embedding = Embedding::from(value);
             embeddings.push((key.clone(), embedding));
         }
-        let backbone = Transformer::new(&dict["backbone"], &config);
+        let backbone = Transformer::new(&dict["backbone"], &config, state);
 
         let mut action_heads = IndexMap::new();
         for (key, value) in dict["action_heads"].as_dict() {

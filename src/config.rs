@@ -43,7 +43,7 @@ pub struct RogueNetConfig {
     pub n_head: u32,
     pub d_model: u32,
     pub pooling: Option<String>,
-    pub relpos_encoding: Option<String>,
+    pub relpos_encoding: MaybeRelpos,
     pub d_qk: u32,
     pub translation: Option<String>,
 }
@@ -82,3 +82,43 @@ pub struct RolloutConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct EvalConfig;
+
+// Hack to allow RelposEncodingConfig to be either "None" or "RelposEncodingConfig" (rather than "Some(RelposEncodingConfig)")
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum MaybeRelpos {
+    None,
+    RelposEncodingConfig {
+        extent: Vec<u32>,
+        position_features: Vec<String>,
+        scale: f32,
+        per_entity_values: bool,
+        exclude_entities: Vec<String>,
+        value_relpos_projection: bool,
+        key_relpos_projection: bool,
+        per_entity_projections: bool,
+        radial: bool,
+        distance: bool,
+        rotation_vec_features: Option<Vec<String>>,
+        rotation_angle_feature: Option<String>,
+        interpolate: bool,
+        value_gate: String,
+    },
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RelposEncodingConfig {
+    pub extent: Vec<u32>,
+    pub position_features: Vec<String>,
+    pub scale: f32,
+    pub per_entity_values: bool,
+    pub exclude_entities: Vec<String>,
+    pub value_relpos_projection: bool,
+    pub key_relpos_projection: bool,
+    pub per_entity_projections: bool,
+    pub radial: bool,
+    pub distance: bool,
+    pub rotation_vec_features: Option<Vec<String>>,
+    pub rotation_angle_feature: Option<String>,
+    pub interpolate: bool,
+    pub value_gate: String,
+}
