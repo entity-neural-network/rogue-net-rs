@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::io::Read;
 
 use indexmap::IndexMap;
 use ndarray::{Array, IxDyn};
@@ -9,10 +9,8 @@ pub enum Error {
     ParseError(String),
 }
 
-pub fn decode_state_dict(bytes: &[u8]) -> Result<TensorDict, Error> {
-    let mut cursor = Cursor::new(bytes);
-    let value =
-        rmpv::decode::read_value(&mut cursor).map_err(|e| Error::ParseError(e.to_string()))?;
+pub fn decode_state_dict<R: Read>(mut rd: R) -> Result<TensorDict, Error> {
+    let value = rmpv::decode::read_value(&mut rd).map_err(|e| Error::ParseError(e.to_string()))?;
     match value {
         Value::Map(items) => {
             let mut tensors = TensorDict::Dict(IndexMap::new());

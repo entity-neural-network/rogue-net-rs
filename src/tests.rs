@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ndarray::prelude::*;
 
-use crate::load_checkpoint;
+use crate::rogue_net::RogueNet;
 
 #[test]
 fn test_vanilla_rogue_net() {
@@ -17,7 +17,7 @@ fn test_vanilla_rogue_net() {
 }
 
 fn test_snake_net(checkpoint: &str, expected: Array2<f32>) {
-    let rogue_net = load_checkpoint(checkpoint);
+    let rogue_net = RogueNet::load(checkpoint);
     let mut entities = HashMap::new();
     entities.insert("Head".to_string(), array![[3.0, 4.0]]);
     entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);

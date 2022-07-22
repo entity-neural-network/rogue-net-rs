@@ -1,11 +1,14 @@
-use std::collections::HashMap;
-
 use indexmap::IndexMap;
 use ndarray::{concatenate, Array2, Axis};
+use std::collections::HashMap;
+use std::fs::File;
+use std::path::Path;
 
 use crate::categorical_action_head::CategoricalActionHead;
 use crate::config::RogueNetConfig;
+use crate::config::TrainConfig;
 use crate::embedding::Embedding;
+use crate::msgpack::decode_state_dict;
 use crate::msgpack::TensorDict;
 use crate::state::State;
 use crate::transformer::Transformer;
@@ -19,6 +22,68 @@ pub struct RogueNet {
 }
 
 impl RogueNet {
+    pub fn load<P: AsRef<Path>>(path: P) -> RogueNet {
+        let config_path = path.as_ref().join("config.ron");
+        let config: TrainConfig = ron::de::from_reader(
+            File::open(&config_path)
+                .unwrap_or_else(|_| panic!("Failed to open {}", config_path.display())),
+        )
+        .unwrap();
+
+        let state_path = path.as_ref().join("state.ron");
+        let state: State = ron::de::from_reader(
+            File::open(&state_path)
+                .unwrap_or_else(|_| panic!("Failed to open {}", state_path.display())),
+        )
+        .unwrap();
+
+        let agent_path = path.as_ref().join("state.agent.msgpack");
+        let state_dict = decode_state_dict(File::open(&agent_path).unwrap()).unwrap();
+        RogueNet::new(&state_dict, config.net, &state)
+    }
+
+    pub fn load_archive(path: &Path) -> Result<RogueNet, Box<dyn std::error::Error>> {
+        let mut a = tar::Archive::new(File::open(path)?);
+        let mut config: Option<TrainConfig> = None;
+        let mut state = None;
+        let mut state_dict = None;
+        for file in a.entries()? {
+            let file = file?;
+            match file
+                .path()?
+                .components()
+                .last()
+                .unwrap()
+                .as_os_str()
+                .to_str()
+                .unwrap()
+            {
+                "config.ron" => config = Some(ron::de::from_reader(file).unwrap()),
+                "state.ron" => state = Some(ron::de::from_reader(file).unwrap()),
+                "state.agent.msgpack" => state_dict = Some(decode_state_dict(file).unwrap()),
+                _ => {
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Unexpected file: {}", file.path().unwrap().display()),
+                    )))
+                }
+            }
+        }
+        Ok(RogueNet::new(
+            &state_dict.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::Other, "Missing state.agent.msgpack")
+            })?,
+            config
+                .ok_or_else(|| {
+                    std::io::Error::new(std::io::ErrorKind::Other, "Missing config.ron")
+                })?
+                .net,
+            &state.ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::Other, "Missing state.ron")
+            })?,
+        ))
+    }
+
     pub fn forward(&self, entities: &HashMap<String, Array2<f32>>) -> (Array2<f32>, Vec<u64>) {
         let mut embeddings = Vec::with_capacity(entities.len());
         for (key, embedding) in &self.embeddings {
