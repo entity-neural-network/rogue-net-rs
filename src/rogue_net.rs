@@ -2,6 +2,7 @@ use indexmap::IndexMap;
 use ndarray::{concatenate, Array2, Axis};
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 
 use crate::categorical_action_head::CategoricalActionHead;
@@ -42,8 +43,8 @@ impl RogueNet {
         RogueNet::new(&state_dict, config.net, &state)
     }
 
-    pub fn load_archive(path: &Path) -> Result<RogueNet, Box<dyn std::error::Error>> {
-        let mut a = tar::Archive::new(File::open(path)?);
+    pub fn load_archive<R: Read>(r: R) -> Result<RogueNet, Box<dyn std::error::Error>> {
+        let mut a = tar::Archive::new(r);
         let mut config: Option<TrainConfig> = None;
         let mut state = None;
         let mut state_dict = None;
