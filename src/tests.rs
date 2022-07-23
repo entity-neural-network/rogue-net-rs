@@ -7,11 +7,11 @@ use crate::rogue_net::RogueNet;
 #[test]
 fn test_vanilla_rogue_net() {
     test_snake_net(
-        "norelpos/latest-step000000024576",
+        "test-data/simple",
         array![[0.24504025, 0.24284518, 0.2426384, 0.26947618]],
     );
     test_snake_net(
-        "checkpoints/latest-step000000024576",
+        "test-data/relpos-encoding",
         array![[0.23046242, 0.27693206, 0.21968368, 0.2729218]],
     );
 }

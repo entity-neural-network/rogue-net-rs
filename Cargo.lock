@@ -468,7 +468,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rogue_net"
+name = "rogue-net"
 version = "0.1.0"
 dependencies = [
  "clap",

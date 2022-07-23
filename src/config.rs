@@ -35,15 +35,25 @@ pub struct EnvConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Network architecture hyperparameters for RogueNet.
 pub struct RogueNetConfig {
+    /// Dropout probability for the embedding layer.
     pub embd_pdrop: f64,
+    /// Dropout probability on attention block output.
     pub resid_pdrop: f64,
+    /// Dropout probability on attention probabilities.
     pub attn_pdrop: f64,
+    /// Number of transformer blocks.
     pub n_layer: u32,
+    /// Number of attention heads.
     pub n_head: u32,
+    /// Model width.
     pub d_model: u32,
+    /// Replace attention with a pooling layer.
     pub pooling: Option<String>,
+    /// Settings for relative position encoding.
     pub relpos_encoding: MaybeRelpos,
+    /// Width of keys and queries used in entity-selection heads.
     pub d_qk: u32,
     pub translation: Option<String>,
 }

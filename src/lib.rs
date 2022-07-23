@@ -12,4 +12,5 @@ mod state;
 mod tests;
 mod transformer;
 
+pub use crate::config::RogueNetConfig;
 pub use crate::rogue_net::RogueNet;

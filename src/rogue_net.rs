@@ -15,6 +15,7 @@ use crate::state::State;
 use crate::transformer::Transformer;
 
 #[derive(Debug, Clone)]
+/// Implements the [RogueNet](https://github.com/entity-neural-network/rogue-net) entity neural network.
 pub struct RogueNet {
     pub config: RogueNetConfig,
     embeddings: Vec<(String, Embedding)>,
@@ -23,6 +24,10 @@ pub struct RogueNet {
 }
 
 impl RogueNet {
+    /// Loads the parameters for a trained RogueNet neural network from a checkpoint directory produced by [enn-trainer](https://github.com/entity-neural-network/enn-trainer).
+    ///
+    /// # Arguments
+    /// * `path` - Path to the checkpoint directory.
     pub fn load<P: AsRef<Path>>(path: P) -> RogueNet {
         let config_path = path.as_ref().join("config.ron");
         let config: TrainConfig = ron::de::from_reader(
@@ -43,6 +48,18 @@ impl RogueNet {
         RogueNet::new(&state_dict, config.net, &state)
     }
 
+    /// Loads the parameters for a trained RogueNet neural network from a tar archive of a checkpoint directory.
+    ///
+    /// # Arguments
+    /// * `r` - A reader for the tar archive.
+    ///
+    /// # Example
+    /// ```
+    /// use std::fs::File;
+    /// use rogue_net::RogueNet;
+    ///
+    /// let rogue_net = RogueNet::load_archive(File::open("rogue-net.tar").unwrap());
+    /// ```
     pub fn load_archive<R: Read>(r: R) -> Result<RogueNet, Box<dyn std::error::Error>> {
         let mut a = tar::Archive::new(r);
         let mut config: Option<TrainConfig> = None;
@@ -85,6 +102,24 @@ impl RogueNet {
         ))
     }
 
+    /// Runs a forward pass of the RogueNet neural network.
+    ///
+    /// # Arguments
+    /// * `entities` - Maps each entity type to an `Array2<f32>` containing the entities' features.
+    ///
+    /// # Example
+    /// ```
+    /// use std::collections::HashMap;
+    /// use ndarray::prelude::*;
+    /// use rogue_net::RogueNet;
+    ///
+    /// let rogue_net = RogueNet::load("checkpoint-dir");
+    /// let mut entities = HashMap::new();
+    /// entities.insert("Head".to_string(), array![[3.0, 4.0]]);
+    /// entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
+    /// entities.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
+    /// let (action_probs, actions) = rogue_net.forward(&entities);
+    /// ```
     pub fn forward(&self, entities: &HashMap<String, Array2<f32>>) -> (Array2<f32>, Vec<u64>) {
         let mut embeddings = Vec::with_capacity(entities.len());
         for (key, embedding) in &self.embeddings {
@@ -104,7 +139,7 @@ impl RogueNet {
             .forward(x.view(), vec![0])
     }
 
-    pub fn new(state_dict: &TensorDict, config: RogueNetConfig, state: &State) -> Self {
+    fn new(state_dict: &TensorDict, config: RogueNetConfig, state: &State) -> Self {
         assert!(
             config.embd_pdrop == 0.0 && config.resid_pdrop == 0.0 && config.attn_pdrop == 0.0,
             "dropout is not supported"
