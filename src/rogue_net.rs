@@ -60,7 +60,7 @@ impl RogueNet {
     ///
     /// let rogue_net = RogueNet::load_archive(File::open("rogue-net.tar").unwrap());
     /// ```
-    pub fn load_archive<R: Read>(r: R) -> Result<RogueNet, Box<dyn std::error::Error>> {
+    pub fn load_archive<R: Read>(r: R) -> Result<RogueNet, std::io::Error> {
         let mut a = tar::Archive::new(r);
         let mut config: Option<TrainConfig> = None;
         let mut state = None;
@@ -80,10 +80,10 @@ impl RogueNet {
                 "state.ron" => state = Some(ron::de::from_reader(file).unwrap()),
                 "state.agent.msgpack" => state_dict = Some(decode_state_dict(file).unwrap()),
                 _ => {
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
                         format!("Unexpected file: {}", file.path().unwrap().display()),
-                    )))
+                    ))
                 }
             }
         }
