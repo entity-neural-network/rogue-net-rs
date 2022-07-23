@@ -1,6 +1,6 @@
 # RogueNet Rust
 
-[![Actions Status](https://github.com/entity-neural-network/rogue-net-rs/workflows/Checks/badge.svg)](https://github.com/entity-neural-network/rogue-net-rs/actions)
+[![Actions Status](https://github.com/entity-neural-network/rogue-net-rs/workflows/Test/badge.svg)](https://github.com/entity-neural-network/rogue-net-rs/actions)
 [![Discord](https://img.shields.io/discord/913497968701747270?style=flat-square)](https://discord.gg/SjVqhSW4Qf)
 
 The rogue-net crate provides a pure Rust implementation of the [RogueNet neural network](https://github.com/entity-neural-network/rogue-net).
