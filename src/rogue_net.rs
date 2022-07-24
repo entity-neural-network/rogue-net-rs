@@ -58,7 +58,7 @@ impl RogueNet {
     /// use std::fs::File;
     /// use rogue_net::RogueNet;
     ///
-    /// let rogue_net = RogueNet::load_archive(File::open("rogue-net.tar").unwrap());
+    /// let rogue_net = RogueNet::load_archive(File::open("test-data/simple.roguenet").unwrap());
     /// ```
     pub fn load_archive<R: Read>(r: R) -> Result<RogueNet, std::io::Error> {
         let mut a = tar::Archive::new(r);
@@ -113,7 +113,7 @@ impl RogueNet {
     /// use ndarray::prelude::*;
     /// use rogue_net::RogueNet;
     ///
-    /// let rogue_net = RogueNet::load("checkpoint-dir");
+    /// let rogue_net = RogueNet::load("test-data/simple");
     /// let mut entities = HashMap::new();
     /// entities.insert("Head".to_string(), array![[3.0, 4.0]]);
     /// entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
