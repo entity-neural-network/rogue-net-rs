@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use ndarray::{concatenate, s, Array2, ArrayView2, Axis};
 
-use crate::config::{MaybeRelpos, RelposEncodingConfig, RogueNetConfig};
+use crate::config::RogueNetConfig;
 use crate::fun::{gelu, softmax};
 use crate::layer_norm::LayerNorm;
 use crate::linear::Linear;
@@ -38,47 +38,13 @@ impl Transformer {
     pub fn new(state_dict: &TensorDict, config: &RogueNetConfig, state: &State) -> Self {
         let dict = state_dict.as_dict();
 
-        let relpos_encoding = match config.relpos_encoding.clone() {
-            MaybeRelpos::RelposEncodingConfig {
-                extent,
-                position_features,
-                scale,
-                per_entity_values,
-                exclude_entities,
-                value_relpos_projection,
-                key_relpos_projection,
-                per_entity_projections,
-                radial,
-                distance,
-                rotation_vec_features,
-                rotation_angle_feature,
-                interpolate,
-                value_gate,
-            } => {
-                let config = RelposEncodingConfig {
-                    extent,
-                    position_features,
-                    scale,
-                    per_entity_values,
-                    exclude_entities,
-                    value_relpos_projection,
-                    key_relpos_projection,
-                    per_entity_projections,
-                    radial,
-                    distance,
-                    rotation_vec_features,
-                    rotation_angle_feature,
-                    interpolate,
-                    value_gate,
-                };
-                Some(Arc::new(RelposEncoding::new(
-                    &dict["relpos_encoding"],
-                    &config,
-                    &state.obs_space,
-                )))
-            }
-            MaybeRelpos::None => None,
-        };
+        let relpos_encoding = config.relpos_encoding.clone().map(|config| {
+            Arc::new(RelposEncoding::new(
+                &dict["relpos_encoding"],
+                &config,
+                &state.obs_space,
+            ))
+        });
 
         let mut blocks = Vec::new();
         for value in dict["blocks"].as_dict().values() {

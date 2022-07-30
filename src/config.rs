@@ -52,7 +52,7 @@ pub struct RogueNetConfig {
     /// Replace attention with a pooling layer.
     pub pooling: Option<String>,
     /// Settings for relative position encoding.
-    pub relpos_encoding: MaybeRelpos,
+    pub relpos_encoding: Option<RelposEncodingConfig>,
     /// Width of keys and queries used in entity-selection heads.
     pub d_qk: u32,
     pub translation: Option<String>,
@@ -91,28 +91,19 @@ pub struct RolloutConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct EvalConfig;
-
-// Hack to allow RelposEncodingConfig to be either "None" or "RelposEncodingConfig" (rather than "Some(RelposEncodingConfig)")
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum MaybeRelpos {
-    None,
-    RelposEncodingConfig {
-        extent: Vec<u32>,
-        position_features: Vec<String>,
-        scale: f32,
-        per_entity_values: bool,
-        exclude_entities: Vec<String>,
-        value_relpos_projection: bool,
-        key_relpos_projection: bool,
-        per_entity_projections: bool,
-        radial: bool,
-        distance: bool,
-        rotation_vec_features: Option<Vec<String>>,
-        rotation_angle_feature: Option<String>,
-        interpolate: bool,
-        value_gate: String,
-    },
+pub struct EvalConfig {
+    pub steps: u64,
+    pub interval: u64,
+    pub num_envs: u64,
+    pub processes: Option<u32>,
+    pub env: EnvConfig,
+    pub capture_videos: bool,
+    pub capture_samples: Option<String>,
+    pub capture_logits: bool,
+    pub capture_samples_subsample: u64,
+    pub run_on_first_step: bool,
+    pub opponent: String,
+    pub opponent_only: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

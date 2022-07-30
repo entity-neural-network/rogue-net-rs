@@ -1,5 +1,6 @@
 use indexmap::IndexMap;
 use ndarray::{concatenate, Array2, Axis};
+use ron::extensions::Extensions;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
@@ -30,18 +31,22 @@ impl RogueNet {
     /// * `path` - Path to the checkpoint directory.
     pub fn load<P: AsRef<Path>>(path: P) -> RogueNet {
         let config_path = path.as_ref().join("config.ron");
-        let config: TrainConfig = ron::de::from_reader(
-            File::open(&config_path)
-                .unwrap_or_else(|_| panic!("Failed to open {}", config_path.display())),
-        )
-        .unwrap();
+        let ron = ron::Options::default().with_default_extension(Extensions::IMPLICIT_SOME);
+
+        let config: TrainConfig = ron
+            .from_reader(
+                File::open(&config_path)
+                    .unwrap_or_else(|_| panic!("Failed to open {}", config_path.display())),
+            )
+            .unwrap();
 
         let state_path = path.as_ref().join("state.ron");
-        let state: State = ron::de::from_reader(
-            File::open(&state_path)
-                .unwrap_or_else(|_| panic!("Failed to open {}", state_path.display())),
-        )
-        .unwrap();
+        let state: State = ron
+            .from_reader(
+                File::open(&state_path)
+                    .unwrap_or_else(|_| panic!("Failed to open {}", state_path.display())),
+            )
+            .unwrap();
 
         let agent_path = path.as_ref().join("state.agent.msgpack");
         let state_dict = decode_state_dict(File::open(&agent_path).unwrap()).unwrap();
@@ -65,6 +70,7 @@ impl RogueNet {
         let mut config: Option<TrainConfig> = None;
         let mut state = None;
         let mut state_dict = None;
+        let ron = ron::Options::default().with_default_extension(Extensions::IMPLICIT_SOME);
         for file in a.entries()? {
             let file = file?;
             match file
@@ -76,8 +82,8 @@ impl RogueNet {
                 .to_str()
                 .unwrap()
             {
-                "config.ron" => config = Some(ron::de::from_reader(file).unwrap()),
-                "state.ron" => state = Some(ron::de::from_reader(file).unwrap()),
+                "config.ron" => config = Some(ron.from_reader(file).unwrap()),
+                "state.ron" => state = Some(ron.from_reader(file).unwrap()),
                 "state.agent.msgpack" => state_dict = Some(decode_state_dict(file).unwrap()),
                 _ => {
                     return Err(std::io::Error::new(
