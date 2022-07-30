@@ -36,9 +36,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let file = File::create(path.with_extension("roguenet"))?;
             let mut a = Builder::new(file);
 
-            a.append_path(path.join("config.ron")).unwrap();
-            a.append_path(path.join("state.ron")).unwrap();
-            a.append_path(path.join("state.agent.msgpack")).unwrap();
+            a.append_path("config.ron").unwrap();
+            a.append_path("state.ron").unwrap();
+            a.append_path("state.agent.msgpack").unwrap();
             a.finish()?;
         }
         Cmd::Check(Check { path }) => {
