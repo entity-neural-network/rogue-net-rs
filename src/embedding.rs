@@ -54,14 +54,17 @@ impl Embedding {
     }
 
     pub fn set_obs_filter(&mut self, expected_features: &[String], received_features: &[String]) {
-        let feature_selector = received_features
+        let feature_selector = expected_features
             .iter()
             .map(|f| {
-                expected_features
+                received_features
                     .iter()
                     .position(|ff| ff == f)
                     .unwrap_or_else(|| {
-                        panic!("expected feature of name {} in {:?}", f, received_features)
+                        panic!(
+                            "expected feature with name \"{}\" in {:?}",
+                            f, received_features
+                        )
                     })
             })
             .collect();
