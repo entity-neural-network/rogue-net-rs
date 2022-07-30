@@ -12,13 +12,14 @@ use crate::config::TrainConfig;
 use crate::embedding::Embedding;
 use crate::msgpack::decode_state_dict;
 use crate::msgpack::TensorDict;
-use crate::state::State;
+use crate::state::{ObsSpace, State};
 use crate::transformer::Transformer;
 
 #[derive(Debug, Clone)]
 /// Implements the [RogueNet](https://github.com/entity-neural-network/rogue-net) entity neural network.
 pub struct RogueNet {
     pub config: RogueNetConfig,
+    pub obs_space: ObsSpace,
     embeddings: Vec<(String, Embedding)>,
     backbone: Transformer,
     action_heads: IndexMap<String, CategoricalActionHead>,
@@ -172,6 +173,21 @@ impl RogueNet {
             backbone,
             action_heads,
             config,
+            obs_space: state.obs_space.clone(),
         }
+    }
+
+    /// Adapts the RogueNet neural network to the given observation space by
+    /// filtering out any features that were not present during training.
+    pub fn with_obs_filter(mut self, obs_space: HashMap<String, Vec<String>>) -> Self {
+        for (entity, received_features) in obs_space {
+            if let Some((_, embedding)) = self.embeddings.iter_mut().find(|(e, _)| *e == entity) {
+                embedding.set_obs_filter(
+                    &self.obs_space.entities[&entity].features,
+                    &received_features,
+                );
+            }
+        }
+        self
     }
 }

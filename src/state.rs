@@ -14,13 +14,13 @@ pub struct State {
     pub action_space: IndexMap<String, ActionSpace>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ObsSpace {
     pub global_features: Vec<String>,
     pub entities: IndexMap<String, Entity>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Entity {
     pub features: Vec<String>,
 }

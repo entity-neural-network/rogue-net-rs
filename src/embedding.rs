@@ -11,6 +11,7 @@ pub struct Embedding {
     std: Array<f32, Ix2>,
     proj: Linear,
     ln: LayerNorm,
+    feature_selector: Option<Vec<usize>>,
 }
 
 impl<'a> From<&'a TensorDict> for Embedding {
@@ -34,16 +35,36 @@ impl<'a> From<&'a TensorDict> for Embedding {
             mean: mean.into_dimensionality().unwrap(),
             proj: Linear::from(&dict["1"]),
             ln: LayerNorm::from(&dict["3"]),
+            feature_selector: None,
         }
     }
 }
 
 impl Embedding {
     pub fn forward(&self, x: ArrayView2<f32>) -> Array2<f32> {
+        let x = match &self.feature_selector {
+            Some(selector) => x.select(Axis(1), selector),
+            None => x.to_owned(),
+        };
         let x = (&x - &self.mean) / &self.std;
         let x = clip(x.view(), -5.0, 5.0);
         let x = self.proj.forward(x.view());
         let x = relu(x.view());
         self.ln.forward(x.view())
+    }
+
+    pub fn set_obs_filter(&mut self, expected_features: &[String], received_features: &[String]) {
+        let feature_selector = received_features
+            .iter()
+            .map(|f| {
+                expected_features
+                    .iter()
+                    .position(|ff| ff == f)
+                    .unwrap_or_else(|| {
+                        panic!("expected feature of name {} in {:?}", f, received_features)
+                    })
+            })
+            .collect();
+        self.feature_selector = Some(feature_selector);
     }
 }
