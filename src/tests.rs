@@ -22,7 +22,7 @@ fn test_snake_net(checkpoint: &str, expected: Array2<f32>) {
     entities.insert("Head".to_string(), array![[3.0, 4.0]]);
     entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
     entities.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
-    let (probs, acts) = rogue_net.forward(&entities);
+    let (probs, acts) = rogue_net.forward(entities);
     assert_eq!(acts.len(), 1);
     assert!(acts[0] < 4);
     assert!(

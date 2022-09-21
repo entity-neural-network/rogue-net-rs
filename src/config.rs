@@ -55,7 +55,18 @@ pub struct RogueNetConfig {
     pub relpos_encoding: Option<RelposEncodingConfig>,
     /// Width of keys and queries used in entity-selection heads.
     pub d_qk: u32,
-    pub translation: Option<String>,
+    /// Configuration for translating positions of all entities with respect
+    /// to a reference entity.
+    pub translation: Option<TranslationConfig>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct TranslationConfig {
+    pub reference_entity: String,
+    pub position_features: Vec<String>,
+    pub rotation_vec_features: Option<Vec<String>>,
+    pub rotation_angle_feature: Option<String>,
+    pub add_dist_feature: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

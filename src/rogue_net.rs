@@ -20,9 +20,17 @@ use crate::transformer::Transformer;
 pub struct RogueNet {
     pub config: RogueNetConfig,
     pub obs_space: ObsSpace,
+    translation: Option<Translate>,
     embeddings: Vec<(String, Embedding)>,
     backbone: Transformer,
     action_heads: IndexMap<String, CategoricalActionHead>,
+}
+
+#[derive(Debug, Clone)]
+struct Translate {
+    reference_entity: String,
+    rotation_vec_indices: Option<[usize; 2]>,
+    position_feature_indices: HashMap<String, Vec<usize>>,
 }
 
 impl RogueNet {
@@ -127,7 +135,44 @@ impl RogueNet {
     /// entities.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
     /// let (action_probs, actions) = rogue_net.forward(&entities);
     /// ```
-    pub fn forward(&self, entities: &HashMap<String, Array2<f32>>) -> (Array2<f32>, Vec<u64>) {
+    pub fn forward(&self, mut entities: HashMap<String, Array2<f32>>) -> (Array2<f32>, Vec<u64>) {
+        if let Some(t) = &self.translation {
+            let reference_entity = entities
+                .get(&t.reference_entity)
+                .unwrap_or_else(|| panic!("Missing entity type: {}", t.reference_entity));
+            let origin = t.position_feature_indices[&t.reference_entity]
+                .iter()
+                .map(|&i| reference_entity[[0, i]])
+                .collect::<Vec<_>>();
+            let rotation = t
+                .rotation_vec_indices
+                .map(|r| (reference_entity[[0, r[0]]], reference_entity[[0, r[1]]]));
+            for (entity, feats) in entities.iter_mut() {
+                if *entity != t.reference_entity {
+                    for i in 0..feats.dim().0 {
+                        match rotation {
+                            Some((rx, ry)) => {
+                                let x =
+                                    feats[[i, t.position_feature_indices[entity][0]]] - origin[0];
+                                let y =
+                                    feats[[i, t.position_feature_indices[entity][1]]] - origin[1];
+                                feats[[i, t.position_feature_indices[entity][0]]] = x * rx + y * ry;
+                                feats[[i, t.position_feature_indices[entity][1]]] =
+                                    -x * ry + y * rx;
+                            }
+                            None => {
+                                for (j, x) in
+                                    t.position_feature_indices[entity].iter().zip(origin.iter())
+                                {
+                                    feats[[i, *j]] -= x;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         let mut embeddings = Vec::with_capacity(entities.len());
         for (key, embedding) in &self.embeddings {
             let x = embedding.forward(entities[key].view());
@@ -138,7 +183,7 @@ impl RogueNet {
             &embeddings.iter().map(|x| x.view()).collect::<Vec<_>>(),
         )
         .unwrap();
-        let x = self.backbone.forward(x, entities);
+        let x = self.backbone.forward(x, &entities);
         self.action_heads
             .values()
             .next()
@@ -152,7 +197,54 @@ impl RogueNet {
             "dropout is not supported"
         );
         assert!(config.pooling.is_none(), "pooling is not supported");
-        assert!(config.translation.is_none(), "translation is not supported");
+
+        let translation = config.translation.as_ref().map(|t| {
+            assert!(
+                t.rotation_angle_feature.is_none(),
+                "rotation_angle_feature not implemented",
+            );
+            assert!(!t.add_dist_feature, "add_dist_features not implemented");
+            let rotation_vec_indices = t.rotation_vec_features.as_ref().map(|rot| {
+                let indices = rot
+                    .iter()
+                    .map(|s| {
+                        state.obs_space.entities[&t.reference_entity]
+                            .features
+                            .iter()
+                            .position(|f| f == s)
+                            .unwrap()
+                    })
+                    .collect::<Vec<_>>();
+                assert_eq!(indices.len(), 2, "rotation_vec_features must have length 2");
+                [indices[0], indices[1]]
+            });
+            let position_feature_indices = state
+                .obs_space
+                .entities
+                .iter()
+                .map(|(name, entity)| {
+                    let indices = t
+                        .position_features
+                        .iter()
+                        .map(|f| {
+                            entity
+                                .features
+                                .iter()
+                                .position(|f2| f2 == f)
+                                .unwrap_or_else(|| {
+                                    panic!("feature \"{}\" not found in reference entity", f)
+                                })
+                        })
+                        .collect::<Vec<_>>();
+                    (name.clone(), indices)
+                })
+                .collect();
+            Translate {
+                reference_entity: t.reference_entity.clone(),
+                rotation_vec_indices,
+                position_feature_indices,
+            }
+        });
 
         let dict = state_dict.as_dict();
         let mut embeddings = Vec::new();
@@ -170,6 +262,7 @@ impl RogueNet {
 
         RogueNet {
             embeddings,
+            translation,
             backbone,
             action_heads,
             config,

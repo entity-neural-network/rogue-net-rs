@@ -9,15 +9,15 @@ use tar::Builder;
 #[clap(name = "rogue-net-cli")]
 #[clap(bin_name = "rogue-net-cli")]
 enum Cmd {
-    Archive(Archive),
+    Archive(Pack),
     Check(Check),
 }
 
 #[derive(clap::Args)]
 #[clap(author, version, about, long_about = None)]
-struct Archive {
+struct Pack {
     /// Path to checkpoint file to archive
-    #[clap(short, long, value_parser)]
+    #[clap(value_parser)]
     path: PathBuf,
 }
 
@@ -25,13 +25,13 @@ struct Archive {
 #[clap(author, version, about, long_about = None)]
 struct Check {
     /// Path to archive to check
-    #[clap(short, long, value_parser)]
+    #[clap(value_parser)]
     path: PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     match Cmd::parse() {
-        Cmd::Archive(Archive { path }) => {
+        Cmd::Archive(Pack { path }) => {
             // Append .tar to the path
             let file = File::create(path.with_extension("roguenet"))?;
             let mut a = Builder::new(file);
