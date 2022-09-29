@@ -133,7 +133,7 @@ impl RogueNet {
     /// entities.insert("Head".to_string(), array![[3.0, 4.0]]);
     /// entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
     /// entities.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
-    /// let (action_probs, actions) = rogue_net.forward(&entities);
+    /// let (action_probs, actions) = rogue_net.forward(entities);
     /// ```
     pub fn forward(&self, mut entities: HashMap<String, Array2<f32>>) -> (Array2<f32>, Vec<u64>) {
         if let Some(t) = &self.translation {
