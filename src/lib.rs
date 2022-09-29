@@ -13,4 +13,4 @@ mod tests;
 mod transformer;
 
 pub use crate::config::RogueNetConfig;
-pub use crate::rogue_net::RogueNet;
+pub use crate::rogue_net::{FwdArgs, RogueNet};

@@ -26,6 +26,13 @@ pub struct RogueNet {
     action_heads: IndexMap<String, CategoricalActionHead>,
 }
 
+#[derive(Debug, Clone, Default)]
+/// Arguments for RogueNet forward pass.
+pub struct FwdArgs {
+    pub features: HashMap<String, Array2<f32>>,
+    pub actors: Vec<String>,
+}
+
 #[derive(Debug, Clone)]
 struct Translate {
     reference_entity: String,
@@ -126,18 +133,19 @@ impl RogueNet {
     /// ```
     /// use std::collections::HashMap;
     /// use ndarray::prelude::*;
-    /// use rogue_net::RogueNet;
+    /// use rogue_net::{RogueNet, FwdArgs};
     ///
     /// let rogue_net = RogueNet::load("test-data/simple");
-    /// let mut entities = HashMap::new();
-    /// entities.insert("Head".to_string(), array![[3.0, 4.0]]);
-    /// entities.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
-    /// entities.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
-    /// let (action_probs, actions) = rogue_net.forward(entities);
+    /// let mut features = HashMap::new();
+    /// features.insert("Head".to_string(), array![[3.0, 4.0]]);
+    /// features.insert("SnakeSegment".to_string(), array![[3.0, 4.0], [4.0, 4.0]]);
+    /// features.insert("Food".to_string(), array![[3.0, 5.0], [8.0, 4.0]]);
+    /// let (action_probs, actions) = rogue_net.forward(FwdArgs { features, ..Default::default() });
     /// ```
-    pub fn forward(&self, mut entities: HashMap<String, Array2<f32>>) -> (Array2<f32>, Vec<u64>) {
+    pub fn forward(&self, mut args: FwdArgs) -> (Array2<f32>, Vec<u64>) {
         if let Some(t) = &self.translation {
-            let reference_entity = entities
+            let reference_entity = args
+                .features
                 .get(&t.reference_entity)
                 .unwrap_or_else(|| panic!("Missing entity type: {}", t.reference_entity));
             let origin = t.position_feature_indices[&t.reference_entity]
@@ -147,7 +155,7 @@ impl RogueNet {
             let rotation = t
                 .rotation_vec_indices
                 .map(|r| (reference_entity[[0, r[0]]], reference_entity[[0, r[1]]]));
-            for (entity, feats) in entities.iter_mut() {
+            for (entity, feats) in args.features.iter_mut() {
                 if *entity != t.reference_entity {
                     for i in 0..feats.dim().0 {
                         match rotation {
@@ -173,9 +181,17 @@ impl RogueNet {
             }
         }
 
-        let mut embeddings = Vec::with_capacity(entities.len());
+        let mut actors = vec![];
+        let mut i = 0;
+        let mut embeddings = Vec::with_capacity(args.features.len());
         for (key, embedding) in &self.embeddings {
-            let x = embedding.forward(entities[key].view());
+            let x = embedding.forward(args.features[key].view());
+            if args.actors.iter().any(|a| a == key) {
+                for j in i..i + x.dim().0 {
+                    actors.push(j);
+                }
+            }
+            i += x.dim().0;
             embeddings.push(x);
         }
         let x = concatenate(
@@ -183,12 +199,12 @@ impl RogueNet {
             &embeddings.iter().map(|x| x.view()).collect::<Vec<_>>(),
         )
         .unwrap();
-        let x = self.backbone.forward(x, &entities);
+        let x = self.backbone.forward(x, &args.features);
         self.action_heads
             .values()
             .next()
             .unwrap()
-            .forward(x.view(), vec![0])
+            .forward(x.view(), actors)
     }
 
     fn new(state_dict: &TensorDict, config: RogueNetConfig, state: &State) -> Self {
