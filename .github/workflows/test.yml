@@ -58,7 +58,6 @@ jobs:
       # install dependencies if cache does not exist
       #----------------------------------------------
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         continue-on-error: true
         run: |
           poetry install --no-interaction --no-root
@@ -66,8 +65,8 @@ jobs:
       - name: Install additional dependencies
         run: |
           poetry run pip install torch-scatter -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
-          poetry run pip install maturin==0.13.5
-          poetry run pip install pytest
+      #    poetry run pip install maturin==0.13.5
+      #    poetry run pip install pytest
       #----------------------------------------------
       # install your root project, if required
       #----------------------------------------------
