@@ -19,8 +19,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-    
-    name: Checks
 
   integration_test:
     name: Integration Test
