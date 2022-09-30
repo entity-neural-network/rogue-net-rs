@@ -24,11 +24,6 @@ serde = { version = "1", features = ["derive"] }
 clap = { version = "3.2", features = ["derive"] }
 tar = "0.4"
 
-pyo3 = { version = "0.15", features = ["extension-module"], optional = true }
-
 [[bin]]
 name = "rogue-net"
 path = "src/bin/main.rs"
-
-[features]
-python = ["pyo3"]
