@@ -8,7 +8,7 @@ use crate::fun::{gelu, softmax};
 use crate::layer_norm::LayerNorm;
 use crate::linear::Linear;
 use crate::msgpack::TensorDict;
-use crate::relpos_encoding::RelposEncoding;
+use crate::relpos_encoding::{RelposEncoding, RelposIndices};
 use crate::state::State;
 
 #[derive(Debug, Clone)]
@@ -68,7 +68,7 @@ pub struct TransformerBlock {
 }
 
 impl TransformerBlock {
-    pub fn forward(&self, x: Array2<f32>, relpos_indices: &Option<Array2<usize>>) -> Array2<f32> {
+    pub fn forward(&self, x: Array2<f32>, relpos_indices: &Option<RelposIndices>) -> Array2<f32> {
         let x0 = x.view();
         let x = self.ln1.forward(x.view());
         let x = self.attention.forward(x.view(), relpos_indices);
@@ -117,7 +117,7 @@ impl MultiHeadAttention {
     pub fn forward(
         &self,
         x: ArrayView2<f32>,
-        relpos_indices: &Option<Array2<usize>>,
+        relpos_indices: &Option<RelposIndices>,
     ) -> Array2<f32> {
         let (_, c) = x.dim();
         let d_head = c / self.n_head as usize;

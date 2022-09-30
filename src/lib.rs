@@ -5,6 +5,8 @@ mod fun;
 mod layer_norm;
 mod linear;
 mod msgpack;
+#[cfg(feature = "python")]
+mod python;
 mod relpos_encoding;
 mod rogue_net;
 mod state;

@@ -1,0 +1,15 @@
+[package]
+name = "rogue-net-rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+name = "rogue_net_rs"
+
+[dependencies]
+rogue-net = { path = ".." }
+pyo3 = { version = "0.17", features = ["extension-module"] }
+ndarray = { version = "0.15.4", features = ["approx"] }
+numpy = { version = "0.17" }
