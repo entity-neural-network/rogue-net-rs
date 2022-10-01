@@ -1,7 +1,9 @@
 use indexmap::IndexMap;
-use ndarray::{concatenate, Array2, Axis};
+use ndarray::{concatenate, s, Array2, Axis};
 use ron::extensions::Extensions;
 use std::collections::HashMap;
+use std::env;
+use std::fmt::Write;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -143,6 +145,11 @@ impl RogueNet {
     /// let (action_probs, actions) = rogue_net.forward(FwdArgs { features, ..Default::default() });
     /// ```
     pub fn forward(&self, mut args: FwdArgs) -> (Array2<f32>, Vec<u64>) {
+        if env::var("ROGUE_NET_DUMP_INPUTS").is_ok() {
+            args.dump(self.action_heads.get_index(0).unwrap().0)
+                .unwrap();
+        }
+
         if let Some(t) = &self.translation {
             let reference_entity = args
                 .features
@@ -298,5 +305,54 @@ impl RogueNet {
             }
         }
         self
+    }
+}
+
+impl FwdArgs {
+    fn dump(&self, action_name: &str) -> Result<(), std::fmt::Error> {
+        let mut out = String::new();
+        writeln!(out, "obs = Observation(")?;
+
+        // Features
+        writeln!(out, "    features={{")?;
+        for (entity_name, features) in &self.features {
+            writeln!(out, "        \"{entity_name}\": [")?;
+            for i in 0..features.dim().0 {
+                writeln!(out, "            {},", features.slice(s![i, ..]))?;
+            }
+            writeln!(out, "        ],")?;
+        }
+        writeln!(out, "    }},")?;
+
+        // IDs
+        writeln!(out, "    ids={{")?;
+        let mut total = 0;
+        for (entity_name, features) in &self.features {
+            let count = features.dim().0;
+            writeln!(
+                out,
+                "        \"{entity_name}\": {:?},",
+                &(total..total + count).collect::<Vec<_>>()[..]
+            )?;
+            total += count;
+        }
+        writeln!(out, "    }},")?;
+
+        // done, reward
+        writeln!(out, "    done=False,")?;
+        writeln!(out, "    reward=0.0,")?;
+
+        // Actions
+        writeln!(
+            out,
+            "    actions={{\"{action_name}\": CategoricalActionMask(actor_types={:?})}},",
+            &self.actors[..]
+        )?;
+
+        writeln!(out, ")")?;
+
+        println!("{}", out);
+
+        Ok(())
     }
 }

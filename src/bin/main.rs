@@ -45,7 +45,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             a.finish()?;
         }
         Cmd::Check(Check { path }) => {
-            RogueNet::load_archive(File::open(path)?)?;
+            RogueNet::load_archive(
+                File::open(path.clone())
+                    .map_err(|e| format!("Failed to open archive {}: {}", path.display(), e))?,
+            )?;
         }
     }
 
