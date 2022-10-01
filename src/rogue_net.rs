@@ -192,14 +192,16 @@ impl RogueNet {
         let mut i = 0;
         let mut embeddings = Vec::with_capacity(args.features.len());
         for (key, embedding) in &self.embeddings {
-            let x = embedding.forward(args.features[key].view());
-            if args.actors.iter().any(|a| a == key) {
-                for j in i..i + x.dim().0 {
-                    actors.push(j);
+            if let Some(feats) = args.features.get(key) {
+                let x = embedding.forward(feats.view());
+                if args.actors.iter().any(|a| a == key) {
+                    for j in i..i + x.dim().0 {
+                        actors.push(j);
+                    }
                 }
+                i += x.dim().0;
+                embeddings.push(x);
             }
-            i += x.dim().0;
-            embeddings.push(x);
         }
         let x = concatenate(
             Axis(0),

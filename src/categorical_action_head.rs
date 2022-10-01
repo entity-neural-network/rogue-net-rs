@@ -1,3 +1,5 @@
+use std::env;
+
 use ndarray::prelude::*;
 use rand::Rng;
 
@@ -35,6 +37,10 @@ impl CategoricalActionHead {
                     break;
                 }
             }
+        }
+        if env::var("ROGUE_NET_DUMP_INPUTS").is_ok() {
+            println!("probs: {:?}", probs);
+            println!("acts: {:?}", acts);
         }
         (probs, acts)
     }

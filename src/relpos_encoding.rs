@@ -152,14 +152,15 @@ impl RelposEncoding {
         // Select position features for each entity.
         let mut poss = vec![];
         for (entity_name, indices) in &self.position_feature_indices {
-            let all_features = entities.get(entity_name).unwrap();
-            let mut pos_features = Array2::zeros((all_features.dim().0, indices.len()));
-            for j in 0..all_features.dim().0 {
-                for (k, index) in indices.iter().enumerate() {
-                    pos_features[[j, k]] = all_features[[j, *index]];
+            if let Some(all_features) = entities.get(entity_name) {
+                let mut pos_features = Array2::zeros((all_features.dim().0, indices.len()));
+                for j in 0..all_features.dim().0 {
+                    for (k, index) in indices.iter().enumerate() {
+                        pos_features[[j, k]] = all_features[[j, *index]];
+                    }
                 }
+                poss.push(pos_features);
             }
-            poss.push(pos_features);
         }
         let positions =
             concatenate(Axis(0), &poss.iter().map(|x| x.view()).collect::<Vec<_>>()).unwrap();
@@ -171,13 +172,15 @@ impl RelposEncoding {
                 let mut offset = 0;
                 for (entity_name, indices) in orientation_vec_indices {
                     if let Some(indices) = indices {
-                        for i in 0..entities[entity_name].dim().0 {
-                            let x = entities[entity_name][[i, indices[0]]];
-                            let y = entities[entity_name][[i, indices[1]]];
-                            orientations[offset + i] = y.atan2(x);
+                        if let Some(feats) = entities.get(entity_name) {
+                            for i in 0..feats.dim().0 {
+                                let x = feats[[i, indices[0]]];
+                                let y = feats[[i, indices[1]]];
+                                orientations[offset + i] = y.atan2(x);
+                            }
                         }
                     }
-                    offset += entities[entity_name].dim().0;
+                    offset += entities.get(entity_name).map(|x| x.dim().0).unwrap_or(0);
                 }
                 orientations
             });

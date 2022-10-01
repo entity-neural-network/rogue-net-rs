@@ -109,6 +109,7 @@ obs2 = Observation(
 
 def test_interpolated_vgated_polar_relpos_encoding():
     agent = load_agent("../test-data/interpolated-vgated-polar-relpos")
+    agent.agent.backbone.relpos_encoding.enable_negative_distance_weight_bug = True
     rust_agent = RustRogueNet("../test-data/interpolated-vgated-polar-relpos")
 
     for obs in [obs1, obs2]:
@@ -121,3 +122,69 @@ def test_interpolated_vgated_polar_relpos_encoding():
         probs1 = np.array(action["FighterAction"].probs)
         probs2 = np.array(actionrs)
         assert np.allclose(probs1, probs2, atol=1e-3)
+
+
+def test2():
+    # fmt: off
+    obs = Observation(
+        features={
+            "EnemyFighter": [
+            ],
+            "Bullet": [
+            ],
+            "Fighter": [
+                [235.06451, 67.23907, 476.78607, -191.64099, -0.3507829, -0.9364568, 2628, 0, 0],
+            ],
+            "Asteroid": [
+                [5, 46.376263, 1363.6399, -68.38517, -150.14291, 60.38599],
+                [5, 49.34102, 1201.0923, -416.705, -42.51762, 37.487442],
+                [5, 35.517136, -812.05225, -587.9508, 109.01546, -16.297422],
+                [5, 42.010525, -1360.288, -183.35793, 186.00848, -42.126675],
+                [5, 40.753147, 1286.9294, 325.64374, -4.4167175, -72.66925],
+                [5, 44.961437, -930.1605, 458.22745, 157.42297, -158.60793],
+                [5, 42.685375, -888.70386, 556.05554, -49.145126, -74.60949],
+                [5, 27.552427, -579.8093, -584.94794, -1.0592155, 133.90579],
+                [5, 31.150223, -821.0509, 691.564, -53.641724, 73.88277],
+                [5, 38.9011, -991.45984, -597.4898, -229.52197, 48.143127],
+                [5, 39.70717, 1319.2555, 453.46704, 157.47311, 3.314621],
+                [5, 24.657486, 1348.7976, -589.1774, -60.488983, -399.08264],
+                [5, 44.58143, -1426.1292, -44.35417, 91.22243, -23.057056],
+                [5, 40.547077, 1077.5409, 637.836, -111.578735, 208.53827],
+                [5, 36.653584, 711.1538, -709.0814, 38.343506, -50.872932],
+                [5, 50.828888, 1466.903, -446.5671, 69.12782, -242.57382],
+                [5, 31.008062, -1454.4318, -406.70947, 9.857653, -299.56558],
+                [5, 38.41469, 1498.4381, 99.3505, -0.17997609, 176.20218],
+                [5, 42.33036, -991.62103, 305.83102, 31.80194, -264.99652],
+                [5, 53.697002, -669.9784, -564.3115, -16.160547, 137.36206],
+                [5, 32.312138, -1149.6965, 318.9307, -29.483334, -220.64932],
+                [5, 33.01252, 1135.9131, -481.88245, 78.40583, 52.993008],
+                [5, 47.310513, 352.30197, -742.5074, 82.75871, -7.842938],
+                [5, 47.90092, -1019.54443, -473.14612, 20.12912, 86.75376],
+                [5, 26.029097, 745.67316, 717.29083, -52.49785, 221.72945],
+            ],
+        },
+        ids={
+            "EnemyFighter": [],
+            "Bullet": [],
+            "Fighter": [0],
+            "Asteroid": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25],
+        },
+        done=False,
+        reward=0.0,
+        actions={"FighterAction": CategoricalActionMask(actor_types=["Fighter"])},
+    )
+    expected = np.array([[1.6215079e-14, 7.5476567e-20, 8.01902e-13, 7.717656e-6, 2.3503164e-13, 5.766065e-13, 2.170947e-18, 0.020175882, 0.9798164, 1.4338702e-16, 7.660783e-28, 6.0274736e-32, 7.3295486e-27, 2.0503333e-29, 2.556611e-29, 4.7988906e-24, 3.618303e-25, 5.356012e-20, 1.292686e-20, 2.200566e-23]])
+    # fmt: on
+
+    agent = load_agent("../test-data/interpolated-vgated-polar-relpos")
+    agent.agent.backbone.relpos_encoding.enable_negative_distance_weight_bug = True
+    rust_agent = RustRogueNet("../test-data/interpolated-vgated-polar-relpos")
+
+    action, predicted_return = agent.act(obs)
+    print(action, predicted_return)
+    probs = np.array(action["FighterAction"].probs)
+    actionrs, predicted_returnrs = rust_agent.forward(obs)
+    print(actionrs, predicted_returnrs)
+    probsrs = np.array(actionrs)
+    assert np.allclose(probs, probsrs, atol=1e-3)
+    assert np.allclose(probs, expected, atol=1e-3)

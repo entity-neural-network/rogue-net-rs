@@ -33,6 +33,7 @@ impl RustRogueNet {
             .extract::<HashMap<String, Vec<Vec<f32>>>>(py)?;
         let features = features
             .into_iter()
+            .filter(|(_, v)| !v.is_empty())
             .map(|(k, v)| {
                 (
                     k,
