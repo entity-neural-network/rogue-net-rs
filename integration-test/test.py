@@ -188,3 +188,83 @@ def test2():
     probsrs = np.array(actionrs)
     assert np.allclose(probs, probsrs, atol=1e-3)
     assert np.allclose(probs, expected, atol=1e-3)
+
+
+def test3():
+    # fmt: off
+    obs = Observation(
+        features={
+            "Asteroid": [
+                [5, 35.41441, -515.68665, 213.4396, -175.51308, -36.56198],
+                [5, 29.597523, -107.3833, 343.6884, -3.5703583, 177.41275],
+                [5, 30.776049, 68.27084, 431.2976, -160.50005, 44.104195],
+                [3, 52.52303, -954.9774, 572.81335, -167.02908, 107.58092],
+                [5, 37.978207, -1460.1632, 584.386, 19.80923, 290.61304],
+                [5, 41.534145, 70.22259, -748.87994, 202.29887, -200.10123],
+                [5, 39.82348, 502.52673, -597.9432, -235.29333, 6.119439],
+                [5, 38.11225, -301.00266, 710.9312, 47.840458, 114.33247],
+                [5, 36.14442, 1129.9163, -497.9335, -113.69546, -80.516396],
+                [5, 36.868248, -23.844658, -261.1207, 26.681744, -41.609497],
+                [4, 46.973213, 909.93414, 493.9457, -24.314056, -1.8833084],
+                [5, 39.115173, -928.30164, 267.57916, -1.509134, -130.94781],
+                [5, 34.01347, 229.6968, 345.97156, 95.2292, -91.067955],
+                [5, 20.751083, 82.41437, 205.01694, -144.96706, -64.43984],
+                [5, 35.456905, 1084.8358, 569.66455, 68.2363, -15.907137],
+                [5, 27.674253, 214.5586, -146.56187, 19.108713, -209.98433],
+                [5, 36.39419, -816.5962, -635.5472, -43.278168, 7.9275665],
+                [5, 35.0275, -245.91058, 354.96216, 180.3602, 150.12619],
+                [5, 48.003197, -1162.3973, 40.957043, 109.582054, 226.0207],
+                [5, 52.1686, -97.92219, -399.54413, 66.51314, 82.007],
+                [5, 38.14431, 920.3148, -521.1529, 176.10472, 228.1359],
+                [5, 58.455223, -246.22867, -35.476578, 61.91643, 56.14598],
+                [5, 30.248009, -1091.7274, 599.1921, -300.56244, 118.09567],
+                [5, 32.490543, -85.936676, 139.6808, 190.71118, 39.08954],
+                [5, 43.97996, -1043.8241, -492.9544, 176.20274, 97.87671],
+            ],
+            "Fighter": [
+                [481.3287, 466.083, -52.18614, -264.51498, -0.98411405, -0.1775375, 9972, 0, 0],
+            ],
+            "Bullet": [
+                [823.814, 76.40671, 873.24176, -852.4053, 9],
+            ],
+            "EnemyFighter": [
+            ],
+        },
+        ids={
+            "Asteroid": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+            "Fighter": [25],
+            "Bullet": [26],
+            "EnemyFighter": [],
+        },
+        done=False,
+        reward=0.0,
+        actions={"FighterAction": CategoricalActionMask(actor_types=["Fighter"])},
+    )
+    expected = np.array([[0.007178423, 0.0004987565, 0.22558321, 0.0265032, 0.0071791452, 0.115179665, 0.008427958, 0.50085735, 0.1004384, 0.00796989, 9.579942e-7, 9.6247845e-9, 6.1306796e-6, 1.882288e-6, 1.9029171e-7, 6.7254114e-6, 1.2837264e-6, 0.00014277693, 2.0994605e-5, 3.0061756e-6]])
+    # fmt: on
+
+    agent = load_agent("../test-data/pve-relpos-16m")
+    agent2 = load_agent("../test-data/pve-translate-16m")
+    agent.agent.backbone.relpos_encoding.enable_negative_distance_weight_bug = True
+    rust_agent = RustRogueNet("../test-data/pve-relpos-16m")
+    rust_agent2 = RustRogueNet("../test-data/pve-translate-16m")
+
+    action, predicted_return = agent.act(obs)
+    print(action, predicted_return)
+    probs = np.array(action["FighterAction"].probs)
+    actionrs, predicted_returnrs = rust_agent.forward(obs)
+    print(actionrs, predicted_returnrs)
+    probsrs = np.array(actionrs)
+    assert np.allclose(probs, probsrs, atol=1e-3)
+    assert np.allclose(probs, expected, atol=1e-3)
+
+    action2, _ = agent2.act(obs)
+    probs2 = np.array(action2["FighterAction"].probs)
+    actionrs2, _ = rust_agent2.forward(obs)
+    probsrs2 = np.array(actionrs2)
+
+    assert np.allclose(probs2, probsrs2, atol=1e-3)
+    print(probs2)
+    print(expected)
+    
+    assert not np.allclose(probs2, expected, atol=1e-3)
