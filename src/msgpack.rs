@@ -9,6 +9,16 @@ pub enum Error {
     ParseError(String),
 }
 
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::ParseError(msg) => write!(f, "failed to parse state dict: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 pub fn decode_state_dict<R: Read>(mut rd: R) -> Result<TensorDict, Error> {
     let value = rmpv::decode::read_value(&mut rd).map_err(|e| Error::ParseError(e.to_string()))?;
     match value {
@@ -34,6 +44,9 @@ pub fn decode_state_dict<R: Read>(mut rd: R) -> Result<TensorDict, Error> {
 #[derive(Debug, Clone)]
 pub enum Tensor {
     F32 { shape: Vec<usize>, data: Vec<f32> },
+    // Decoded so that state dicts containing integer tensors load, but no
+    // layer currently reads them.
+    #[allow(dead_code)]
     I64 { shape: Vec<usize>, data: Vec<i64> },
 }
 

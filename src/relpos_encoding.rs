@@ -198,7 +198,7 @@ impl RelposEncoding {
 
             let (indices, weights) = self.interpolated_polar_partition(
                 relative_positions.view(),
-                orientations.as_ref().map(Array1::view),
+                orientations.as_ref().map(|o| o.view()),
             );
             RelposIndices::Interpolated(indices, weights)
         } else {
